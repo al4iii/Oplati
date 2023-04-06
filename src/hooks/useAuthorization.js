@@ -16,8 +16,7 @@ export const useAuthorization = () => {
         setStatus(APIStatus.Success)
         setTokenAsyncStorage(response.access_token, response.refresh_token)
         setAccessToken(response.access_token)
-        setRefreshToken(response.refresh_token)
-        setStatus(APIStatus.Loading);
+        setRefreshToken(response.refresh_token)       
       },
       onError: () => {
         setStatus(APIStatus.Failure);

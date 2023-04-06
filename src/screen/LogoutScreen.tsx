@@ -5,8 +5,7 @@ import {COLORS} from '../constants/theme';
 import {userActionCreators} from '../slices/userSlice';
 
 const LogoutScreen = () => {
-  const {setLogout} = userActionCreators();
-  const {setAccessToken} = userActionCreators();
+  const {setLogout, setAccessToken} = userActionCreators();
 
   const onPress = () => {
     setAccessToken('');

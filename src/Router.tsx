@@ -22,14 +22,10 @@ const Router = () => {
   const accessToken = useSelector((state: RootState) => state.userData.accessToken );
 
   const checkAuth = useCallback(async () => {
-    try {
-      const accessToken = await getAccessTokenAsyncStorage();
-      const refreshToken = await getRefreshTokenAsyncStorage();
-      setAccessToken(accessToken);
-      setRefreshToken(refreshToken);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
+    const accessToken = await getAccessTokenAsyncStorage();
+    const refreshToken = await getRefreshTokenAsyncStorage();
+    setAccessToken(accessToken);
+    setRefreshToken(refreshToken);
     setIsLoading(false);
   }, [setAccessToken, setRefreshToken]);
 

@@ -1,5 +1,7 @@
 import axios from 'axios';
-import { API_URL } from '../constants/api';
+import { getAccessTokenAsyncStorage, getRefreshTokenAsyncStorage, removeToken } from '../store/AsyncStorage';
+import { basicAuth } from '../constants/api';
+import { updateToken } from './updateToken';
 
 export const APIStatus = {
   Initial: 'Initial',
@@ -8,31 +10,61 @@ export const APIStatus = {
   Failure: 'Failure',
 };
 
-export const getCallAPI = () => props => async () => {
+const buildConfig = async (config) => {
+  const token = await getAccessTokenAsyncStorage();
+  const auth = token ? `Bearer ${token}` : basicAuth;
+  const headers = config?.headers ?? {};
+  return {
+    ...config,
+    headers: {
+      ...headers,
+      Authorization: auth,
+    },
+  };
+};
+
+const createAPICaller = (props) => async () => {
   const { url, payload, onError, config, customBaseUrl } = props;
-  let response;
+  
   try {
-    const method = config?.method;
-    if (method && method.toLowerCase() === 'put') {
-      response = await axios.put((customBaseUrl || API_URL) + url, payload, config);
-    } else if (method && method.toLowerCase() === 'get') {
-      response = await axios.get((customBaseUrl || API_URL) + url, config);
-    } else if (method && method.toLowerCase() === 'delete') {
-      response = await axios.delete((customBaseUrl || API_URL) + url, config);
-    } else if (method && method.toLowerCase() === 'post') {
-      response = await axios({ method: 'post', url: (customBaseUrl || API_URL) + url, ...payload, ...config });
+    const updatedConfig = await buildConfig(config);
+    const response = await axios({
+      url: customBaseUrl ? `${customBaseUrl}${url}` : url,
+      method: updatedConfig?.method || 'get',
+      data: payload,
+      ...updatedConfig,
+    });
+
+    if (config?.onSuccess) {
+      config.onSuccess(response.data);
     }
-    if (props.config.onSuccess) {
-      props.config.onSuccess(response.data);
-    } else {
-      props.config.onError(response);
+    return response.data;
+    
+  } catch (error) {
+
+    if (error.response?.status === 401 && error.config?.headers?.Authorization != basicAuth) {
+      await updateToken();
+      const updatedConfig = await buildConfig(config);
+      const response = await axios({
+        url: customBaseUrl ? `${customBaseUrl}${url}` : url,
+        method: updatedConfig?.method || 'get',
+        data: payload,
+        ...updatedConfig,
+      });
+      if (config?.onSuccess) {
+        config.onSuccess(response.data);
+      }
+      return response.data;
     }
-  } catch (err) {
-    props.config.onError(response);
+    if (config?.onError) {
+      await removeToken();
+      config.onError(error);
+    }
     if (onError) {
-      props.config.onError(err);
+      onError(error);
     }
+    throw error;    
   }
 };
 
-export const callAPI = getCallAPI();
+export const callAPI = createAPICaller;
